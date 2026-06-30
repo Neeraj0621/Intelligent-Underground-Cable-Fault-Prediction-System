@@ -21,7 +21,19 @@ The Intelligent Underground Cable Fault Prediction System is a Machine Learning-
 - Responsive Streamlit interface
 
 ---
+## Application Screenshots
 
+### Home Page
+
+![Home](screenshots/home.png)
+
+### Prediction Result
+
+![Prediction](screenshots/prediction.png)
+
+### Analytics Dashboard
+
+![Dashboard](screenshots/dashboard.png)
 ## Technologies Used
 
 - Python
