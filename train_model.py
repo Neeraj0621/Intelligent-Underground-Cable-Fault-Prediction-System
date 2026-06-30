@@ -23,8 +23,15 @@ fault_type = np.random.choice(
 )
 
 # Simple rule for generating labels
-fault = np.where(temperature > 65, 1, 0)
+score = (
+    (temperature > 65).astype(int) +
+    (current > 80).astype(int) +
+    (resistance > 15).astype(int) +
+    (voltage < 220).astype(int) +
+    (fault_distance > cable_length * 0.8).astype(int)
+)
 
+fault = (score >= 2).astype(int)
 df = pd.DataFrame({
     "Voltage": voltage,
     "Current": current,
