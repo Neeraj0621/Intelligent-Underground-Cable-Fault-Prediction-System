@@ -2,10 +2,23 @@ import streamlit as st
 import pandas as pd
 import joblib
 
-from datetime import datetime
-from io import BytesIO
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
-from reportlab.lib import colors
+# ============================
+# Prediction History
+# ============================
+
+if "history" not in st.session_state:
+    st.session_state.history = pd.DataFrame(
+        columns=[
+            "Voltage",
+            "Current",
+            "Resistance",
+            "Temperature",
+            "Cable Length",
+            "Fault Distance",
+            "Status",
+            "Confidence"
+        ]
+    )
 
 # ===========================================
 # PAGE CONFIGURATION
@@ -98,17 +111,11 @@ with st.sidebar:
 
 ---
 
-### ### 👨‍💻 Developed By
+### Developed By
 
-**K Neeraj**
+Neeraj
 
-🎓 B.Tech – CSE (IoT)
-
-🏫 KITS Warangal
-
-🤖 Intelligent Underground Cable Fault Prediction System
-
-📅 Academic Year: 2025–26
+AI Internship Project
 """)
 
     st.divider()
@@ -119,8 +126,6 @@ with st.sidebar:
     st.write("**Dataset:** 1000 Records")
     st.write("**Accuracy:** 94%")
     st.write("**Status:** 🟢 Online")
-    st.write(f"**Date:** {datetime.now().strftime('%d-%m-%Y')}")
-    st.write(f"**Time:** {datetime.now().strftime('%H:%M:%S')}")
 
 # ===========================================
 # MAIN HEADER
@@ -177,7 +182,7 @@ with col1:
 
     voltage = st.number_input(
         "Voltage (V)",
-        min_value=0,
+        min_value=210,
         max_value=250,
         value=230
     )
@@ -275,7 +280,6 @@ with col2:
         "🔄 Reset",
         use_container_width=True
     )
-
 # ===========================================
 # PREDICTION
 # ===========================================
@@ -285,26 +289,6 @@ with col2:
 # ===========================================
 
 if predict:
-    # Input Validation
-    if voltage <= 0:
-        st.error("⚠ Voltage must be greater than 0.")
-        st.stop()
-
-    if current <= 0:
-        st.error("⚠ Current must be greater than 0.")
-        st.stop()
-
-    if resistance <= 0:
-        st.error("⚠ Resistance must be greater than 0.")
-        st.stop()
-
-    if cable_length <= 0:
-        st.error("⚠ Cable Length must be greater than 0.")
-        st.stop()
-
-    if fault_distance > cable_length:
-        st.error("⚠ Fault Distance cannot exceed Cable Length.")
-        st.stop()
 
     # Prepare input data
     data = pd.DataFrame({
@@ -326,9 +310,7 @@ if predict:
     status = "Healthy" if prediction[0] == 0 else "Fault"
 
     # Save prediction history
-# Save prediction history
     new_row = {
-        "Time": datetime.now().strftime("%H:%M:%S"),
         "Voltage": voltage,
         "Current": current,
         "Resistance": resistance,
@@ -347,7 +329,6 @@ if predict:
     st.divider()
 
     st.subheader("Prediction Result")
-
 
     st.progress(int(confidence))
 
@@ -398,173 +379,62 @@ if predict:
         st.info(
             "Recommendation: No fault detected. Cable is operating normally."
         )
-        st.divider()
-
-st.divider()
-
-st.divider()
-st.divider()
-
-st.subheader("📊 Project Statistics")
-
-if not st.session_state.history.empty:
-
-    total_predictions = len(st.session_state.history)
-
-    healthy = len(
-        st.session_state.history[
-            st.session_state.history["Status"] == "Healthy"
-        ]
-    )
-
-    faults = len(
-        st.session_state.history[
-            st.session_state.history["Status"] == "Fault"
-        ]
-    )
-
-    c1, c2, c3 = st.columns(3)
-
-    with c1:
-        st.metric("📈 Total Predictions", total_predictions)
-
-    with c2:
-        st.metric("🟢 Healthy", healthy)
-
-    with c3:
-        st.metric("🔴 Faults", faults)
-st.subheader("📋 Prediction History")
-
-if not st.session_state.history.empty:
-
-    st.dataframe(
-        st.session_state.history,
-        use_container_width=True
-    )
-
-    csv = st.session_state.history.to_csv(index=False).encode("utf-8")
-
-    st.download_button(
-        label="📥 Download Prediction History (CSV)",
-        data=csv,
-        file_name="prediction_history.csv",
-        mime="text/csv",
-        use_container_width=True
-    )
-
-    if st.button("🗑 Clear History"):
-        st.session_state.history = st.session_state.history.iloc[0:0]
-        st.rerun()
-
-else:
-    st.info("No predictions available yet.")
+            # ===========================================
+    # FOOTER
     # ===========================================
-# ANALYTICS
-# ===========================================
-
-if not st.session_state.history.empty:
 
     st.divider()
-    st.subheader("📊 Analytics Dashboard")
+
+    st.markdown(
+        "<h2 style='color:#0E76A8;'>About This Project</h2>",
+        unsafe_allow_html=True
+    )
+
+    st.markdown("""
+    <div style="
+    padding:25px;
+    background:#f8f9fa;
+    border-left:5px solid #0E76A8;
+    border-radius:10px;
+    font-size:16px;
+    ">
+
+    This Intelligent Underground Cable Fault Prediction System uses a
+    <b>Random Forest Machine Learning Model</b> to predict whether an
+    underground cable is healthy or faulty based on:
+
+    <br>    
+    <ul>
+    <li>Voltage</li>
+    <li>Current</li>
+    <li>Resistance</li>
+    <li>Temperature</li>
+    <li>Cable Length</li>
+    <li>Fault Distance</li>
+    </ul>
+
+    <p>
+    This system helps maintenance teams detect cable faults early,
+    reducing downtime and improving operational safety.
+    </p>
+
+    </div> 
+    """, unsafe_allow_html=True)    
+
+    st.divider()
 
     col1, col2 = st.columns(2)
 
     with col1:
-
-        st.bar_chart(
-            st.session_state.history.set_index("Time")[["Voltage"]]
-        )
+        st.write("**Developer**")
+        st.success("Neeraj")
 
     with col2:
+        st.write("**Project**")
+        st.success("AI Internship Project")
 
-        status_counts = (
-            st.session_state.history["Status"]
-            .value_counts()
-        )
-
-        st.bar_chart(status_counts)
-# ===========================================
-# PDF REPORT
-# ===========================================
-
-if not st.session_state.history.empty:
-
-    pdf_buffer = BytesIO()
-
-    doc = SimpleDocTemplate(pdf_buffer)
-
-    data = [list(st.session_state.history.columns)]
-
-    data += st.session_state.history.values.tolist()
-
-    table = Table(data)
-
-    table.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,0),colors.grey),
-        ("TEXTCOLOR",(0,0),(-1,0),colors.whitesmoke),
-        ("GRID",(0,0),(-1,-1),1,colors.black),
-        ("BACKGROUND",(0,1),(-1,-1),colors.beige),
-        ("ALIGN",(0,0),(-1,-1),"CENTER")
-    ]))
-
-    doc.build([table])
-
-    st.download_button(
-        "📄 Download PDF Report",
-        pdf_buffer.getvalue(),
-        file_name="Cable_Fault_Report.pdf",
-        mime="application/pdf",
-        use_container_width=True
-    )        
-# ===========================================
-# FOOTER
-# ===========================================
-
-st.divider()
-
-st.markdown(
-    "<h2 style='color:#0E76A8;'>About This Project</h2>",
-    unsafe_allow_html=True
-)
-
-st.markdown("""
-<div style="
-padding:25px;
-background:#f8f9fa;
-border-left:5px solid #0E76A8;
-border-radius:10px;
-font-size:16px;
-">
-
-This Intelligent Underground Cable Fault Prediction System uses a
-<b>Random Forest Machine Learning Model</b> to predict whether an
-underground cable is healthy or faulty based on:
-
-<br>    
-<ul>
-<li>Voltage</li>
-<li>Current</li>
-<li>Resistance</li>
-<li>Temperature</li>
-<li>Cable Length</li>
-<li>Fault Distance</li>
-</ul>
-
-<p>
-This system helps maintenance teams detect cable faults early,
-reducing downtime and improving operational safety.
-</p>
-
-</div> 
-""", unsafe_allow_html=True)    
-
-st.markdown("---")
-
-st.caption(
-    "Developed using Python • Streamlit • Scikit-learn • Pandas • Machine Learning"
-)
-st.caption(
-    "Developed using Python • Streamlit • Scikit-learn • Pandas • Machine Learning"
-)
-if reset:
+    st.caption(
+        "Developed using Python • Streamlit • Scikit-learn • Pandas • Machine Learning"
+    )
+    if reset:
     st.rerun()
