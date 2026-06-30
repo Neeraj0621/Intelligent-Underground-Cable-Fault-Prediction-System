@@ -4,8 +4,16 @@ import joblib
 
 from datetime import datetime
 from io import BytesIO
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.platypus import (
+    SimpleDocTemplate,
+    Table,
+    TableStyle,
+    Paragraph,
+    Spacer,
+)
+
 from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
 
 # ===========================================
 # PAGE CONFIGURATION
@@ -201,7 +209,7 @@ with col2:
     temperature = st.number_input(
         "Temperature (°C)",
         min_value=20,
-        max_value=90,
+        max_value=500,
         value=40
     )
 
@@ -577,29 +585,70 @@ if not st.session_state.history.empty:
 
     doc = SimpleDocTemplate(pdf_buffer)
 
-    data = [list(st.session_state.history.columns)]
+    styles = getSampleStyleSheet()
 
+    elements = []
+
+    elements.append(
+        Paragraph(
+            "<b>INTELLIGENT UNDERGROUND CABLE FAULT PREDICTION SYSTEM</b>",
+            styles["Title"]
+        )
+    )
+
+    elements.append(Spacer(1, 12))
+
+    elements.append(
+        Paragraph(
+            f"<b>Prediction Time:</b> {datetime.now().strftime('%d-%m-%Y %H:%M:%S')}",
+            styles["Normal"]
+        )
+    )
+
+    elements.append(
+        Paragraph(
+            f"<b>Total Predictions:</b> {len(st.session_state.history)}",
+            styles["Normal"]
+        )
+    )
+
+    elements.append(Spacer(1, 12))
+
+    data = [list(st.session_state.history.columns)]
     data += st.session_state.history.values.tolist()
 
     table = Table(data)
 
     table.setStyle(TableStyle([
-        ("BACKGROUND",(0,0),(-1,0),colors.grey),
-        ("TEXTCOLOR",(0,0),(-1,0),colors.whitesmoke),
-        ("GRID",(0,0),(-1,-1),1,colors.black),
-        ("BACKGROUND",(0,1),(-1,-1),colors.beige),
-        ("ALIGN",(0,0),(-1,-1),"CENTER")
+        ("BACKGROUND", (0,0), (-1,0), colors.darkblue),
+        ("TEXTCOLOR", (0,0), (-1,0), colors.white),
+        ("GRID", (0,0), (-1,-1), 1, colors.black),
+        ("BACKGROUND", (0,1), (-1,-1), colors.beige),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"),
+        ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+        ("BOTTOMPADDING", (0,0), (-1,0), 8),
     ]))
 
-    doc.build([table])
+    elements.append(table)
+
+    elements.append(Spacer(1, 20))
+
+    elements.append(
+        Paragraph(
+            "Generated using Intelligent Underground Cable Fault Prediction System",
+            styles["Italic"]
+        )
+    )
+
+    doc.build(elements)
 
     st.download_button(
-        "📄 Download PDF Report",
-        pdf_buffer.getvalue(),
+        label="📄 Download PDF Report",
+        data=pdf_buffer.getvalue(),
         file_name="Cable_Fault_Report.pdf",
         mime="application/pdf",
         use_container_width=True
-    )        
+    )
 # ===========================================
 # FOOTER
 # ===========================================
