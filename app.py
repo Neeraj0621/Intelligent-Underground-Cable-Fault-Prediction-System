@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import sqlite3
 import joblib
 
 from datetime import datetime
@@ -30,6 +31,37 @@ st.set_page_config(
 # ===========================================
 
 model = joblib.load("model/cable_fault_model.pkl")
+# ==========================================
+# DATABASE
+# ==========================================
+
+conn = sqlite3.connect(
+    "prediction_history.db",
+    check_same_thread=False
+)
+
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS predictions(
+id INTEGER PRIMARY KEY AUTOINCREMENT,
+time TEXT,
+voltage REAL,
+current REAL,
+resistance REAL,
+temperature REAL,
+cable_length REAL,
+fault_distance REAL,
+status TEXT,
+confidence REAL,
+health_score INTEGER,
+risk_level TEXT,
+severity INTEGER,
+priority TEXT
+)
+""")
+
+conn.commit()
 
 # Store prediction history
 if "history" not in st.session_state:
@@ -156,6 +188,37 @@ Machine Learning Based Cable Health Prediction using Random Forest
 """,
 unsafe_allow_html=True
 )
+
+st.divider()
+# ==========================================
+# AI DASHBOARD SUMMARY
+# ==========================================
+
+healthy_count = len(
+    st.session_state.history[
+        st.session_state.history["Status"] == "Healthy"
+    ]
+)
+
+fault_count = len(
+    st.session_state.history[
+        st.session_state.history["Status"] == "Fault"
+    ]
+)
+
+c1, c2, c3, c4 = st.columns(4)
+
+with c1:
+    st.metric("🟢 Healthy", healthy_count)
+
+with c2:
+    st.metric("🔴 Faults", fault_count)
+
+with c3:
+    st.metric("🎯 Accuracy", "94%")
+
+with c4:
+    st.metric("🤖 AI Model", "Random Forest")
 
 st.divider()
 
@@ -293,10 +356,6 @@ with col2:
 # PREDICTION
 # ===========================================
 
-# ===========================================
-# PREDICTION
-# ===========================================
-
 if predict:
     # Input Validation
     if voltage <= 0:
@@ -337,6 +396,7 @@ if predict:
     confidence = float(max(probability[0]) * 100)
 
     status = "Healthy" if prediction[0] == 0 else "Fault"
+
      # ===============================
     # AI Risk Assessment
     # ===============================
@@ -368,8 +428,15 @@ if predict:
         else:
             risk_level = "LOW 🟢"
             priority = "Observe System"
+    # ==========================================
+    # AI HEALTH SCORE
+    # ==========================================
+    if status == "Healthy":
+        health_score = max(90, int(confidence))
+    else:
+        health_score = max(0, 100 - severity)
 
-    # Save prediction history
+# Save prediction history
 # Save prediction history
     new_row = {
         "Time": datetime.now().strftime("%H:%M:%S"),
@@ -384,9 +451,45 @@ if predict:
     }
 
     st.session_state.history = pd.concat(
+
         [st.session_state.history, pd.DataFrame([new_row])],
         ignore_index=True
     )
+    cursor.execute("""
+    INSERT INTO predictions(
+    time,
+    voltage,
+    current,
+    resistance,
+    temperature,
+    cable_length,
+    fault_distance,
+    status,
+    confidence,
+    health_score,
+    risk_level,
+    severity,
+    priority
+    )
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+    """,
+    (
+    datetime.now().strftime("%H:%M:%S"),
+    voltage,
+    current,
+    resistance,
+    temperature,
+    cable_length,
+    fault_distance,
+    status,
+    confidence,
+    health_score,
+    risk_level,
+    severity,
+    priority
+    ))
+
+    conn.commit()
 
     st.divider()
 
@@ -397,18 +500,62 @@ if predict:
     else:
         st.error("🔴 System Status: FAULT DETECTED")
     st.progress(int(confidence))
+    st.subheader("🩺 AI Health Score")
 
-    st.subheader("💡 AI Recommendation")
+    col1, col2, col3, col4 = st.columns(4)
 
-    if prediction[0] == 0:
-        st.success("""
-    ✅ The cable is operating normally.
+    with col1:
+        st.metric("🩺 Health Score", f"{health_score}/100")
 
-    • No immediate maintenance is required.
-    • Continue periodic monitoring.
-    • System performance is stable.
-    """)
+    with col2:
+        st.metric("🎯 Confidence", f"{confidence:.1f}%")
+
+    with col3:
+        st.metric("⚠ Risk Level", risk_level)
+
+    with col4:
+        st.metric("🔥 Severity", f"{severity}%")
+
+    st.progress(health_score / 100)
+    if health_score >= 80:
+        st.success("🟢 Excellent Cable Health")
+    elif health_score >= 60:
+        st.warning("🟡 Moderate Cable Health")
     else:
+        st.error("🔴 Critical Cable Health")
+        st.subheader("🤖 AI Decision")
+
+    if status == "Healthy":
+
+        st.success(f"""
+    ### ✅ AI Decision
+
+    ✔ Cable Health : {health_score}/100
+
+    ✔ Risk Level : {risk_level}
+
+    ✔ Priority : {priority}
+
+    ✔ Maintenance : Not Required
+
+    ✔ Overall Status : Healthy
+    """)
+
+    else:
+
+        st.error(f"""
+    ### 🚨 AI Decision
+
+    ❌ Cable Health : {health_score}/100
+
+    ❌ Risk Level : {risk_level}
+
+    ❌ Severity : {severity}%
+
+    ❌ Priority : {priority}
+
+    ❌ Maintenance Required Immediately
+    """)
         st.warning("""
     ⚠️ Fault detected in the underground cable.
 
@@ -416,10 +563,50 @@ if predict:
     • Schedule maintenance immediately.
     • Replace damaged cable if necessary.
     """)
+    st.subheader("🧠 AI Maintenance Recommendation")
 
-    st.markdown(
-        f"### Overall Prediction Confidence: **{confidence:.2f}%**"
-    )
+    if status == "Healthy":
+        recommendation = """
+    ✅ No immediate maintenance required.
+
+    • Continue routine monitoring.
+    • Inspect cable once every 30 days.
+    • Maintain current operating conditions.
+    • System is operating normally.
+    """
+    else:
+
+        if severity >= 80:
+            recommendation = """
+    🚨 Critical Fault Detected
+
+    • Replace damaged cable immediately.
+    • Disconnect affected section.
+    • Perform complete insulation testing.
+    • Notify maintenance engineer.
+    """
+
+        elif severity >= 50:
+            recommendation = """
+    ⚠ Medium Risk
+
+    • Schedule maintenance within 24 hours.
+    • Inspect insulation resistance.
+    • Monitor temperature continuously.
+    • Reduce electrical load if possible.
+    """
+
+        else:
+            recommendation = """
+    ℹ Minor Fault
+
+    • Continue monitoring.
+    • Perform preventive inspection.
+    • Recheck system after maintenance.
+    """
+
+    st.info(recommendation)
+
 
     if prediction[0] == 1:
 
@@ -507,10 +694,12 @@ features = [
     "Resistance",
     "Temperature",
     "Cable Length",
-    "Fault Distance"
+    "Fault Distance",
+    "Fault Type"
 ]
 
-importance = [15, 30, 18, 20, 7, 10]
+importance = model.feature_importances_
+importance = [round(i * 100, 2) for i in importance]
 
 fig, ax = plt.subplots(figsize=(10,5))
 
@@ -603,6 +792,67 @@ confusion_matrix = pd.DataFrame(
     index=["Actual Healthy", "Actual Fault"]
 )
 
+# ==========================================
+# AI ANALYTICS DASHBOARD
+# ==========================================
+
+st.subheader("📈 AI Analytics Dashboard")
+
+total_predictions = len(st.session_state.history)
+
+healthy_predictions = len(
+    st.session_state.history[
+        st.session_state.history["Status"] == "Healthy"
+    ]
+)
+
+fault_predictions = len(
+    st.session_state.history[
+        st.session_state.history["Status"] == "Fault"
+    ]
+)
+
+fault_rate = (
+    (fault_predictions / total_predictions) * 100
+    if total_predictions > 0
+    else 0
+)
+
+avg_confidence = (
+    st.session_state.history["Confidence"]
+    .str.replace("%", "", regex=False)
+    .astype(float)
+    .mean()
+)
+
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.metric("📊 Total Predictions", total_predictions)
+
+with col2:
+    st.metric("🟢 Healthy", healthy_predictions)
+
+with col3:
+    st.metric("🔴 Faults", fault_predictions)
+
+col4, col5 = st.columns(2)
+
+with col4:
+    st.metric("⚠ Fault Rate", f"{fault_rate:.1f}%")
+
+with col5:
+    st.metric("🎯 Avg Confidence", f"{avg_confidence:.1f}%")
+
+st.divider()
+st.subheader("📈 Prediction Trend")
+
+trend = (
+    st.session_state.history["Status"]
+    .value_counts()
+)
+
+st.bar_chart(trend)
 st.table(confusion_matrix)
 st.subheader("📊 Project Statistics")
 
@@ -657,7 +907,7 @@ if not st.session_state.history.empty:
 
 else:
     st.info("No predictions available yet.")
-    # ===========================================
+# ===========================================
 # ANALYTICS
 # ===========================================
 
@@ -803,8 +1053,6 @@ st.markdown("---")
 st.caption(
     "Developed using Python • Streamlit • Scikit-learn • Pandas • Machine Learning"
 )
-st.caption(
-    "Developed using Python • Streamlit • Scikit-learn • Pandas • Machine Learning"
-)
+
 if reset:
     st.rerun()
