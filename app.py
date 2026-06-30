@@ -185,14 +185,14 @@ with col1:
     current = st.number_input(
         "Current (A)",
         min_value=5.0,
-        max_value=100.0,
+        max_value=500.0,
         value=50.0
     )
 
     resistance = st.number_input(
         "Resistance (Ω)",
         min_value=0.5,
-        max_value=20.0,
+        max_value=100.0,
         value=5.0
     )
 
@@ -356,22 +356,22 @@ if predict:
 
     st.subheader("💡 AI Recommendation")
 
-if prediction[0] == 0:
-    st.success("""
-✅ The cable is operating normally.
+    if prediction[0] == 0:
+        st.success("""
+    ✅ The cable is operating normally.
 
-• No immediate maintenance is required.
-• Continue periodic monitoring.
-• System performance is stable.
-""")
-else:
-    st.warning("""
-⚠️ Fault detected in the underground cable.
+    • No immediate maintenance is required.
+    • Continue periodic monitoring.
+    • System performance is stable.
+    """)
+    else:
+        st.warning("""
+    ⚠️ Fault detected in the underground cable.
 
-• Inspect the predicted fault location.
-• Schedule maintenance immediately.
-• Replace damaged cable if necessary.
-""")
+    • Inspect the predicted fault location.
+    • Schedule maintenance immediately.
+    • Replace damaged cable if necessary.
+    """)
 
     st.markdown(
         f"### Overall Prediction Confidence: **{confidence:.2f}%**"
