@@ -215,7 +215,7 @@ with c2:
     st.metric("🔴 Faults", fault_count)
 
 with c3:
-    st.metric("🎯 Accuracy", "94%")
+    st.metric("Accuracy", "95%")
 
 with c4:
     st.metric("🤖 AI Model", "Random Forest")
