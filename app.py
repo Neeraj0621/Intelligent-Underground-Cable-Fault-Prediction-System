@@ -348,8 +348,30 @@ if predict:
 
     st.subheader("Prediction Result")
 
-
+    if prediction[0] == 0:
+        st.success("🟢 System Status: HEALTHY")
+    else:
+        st.error("🔴 System Status: FAULT DETECTED")
     st.progress(int(confidence))
+
+    st.subheader("💡 AI Recommendation")
+
+if prediction[0] == 0:
+    st.success("""
+✅ The cable is operating normally.
+
+• No immediate maintenance is required.
+• Continue periodic monitoring.
+• System performance is stable.
+""")
+else:
+    st.warning("""
+⚠️ Fault detected in the underground cable.
+
+• Inspect the predicted fault location.
+• Schedule maintenance immediately.
+• Replace damaged cable if necessary.
+""")
 
     st.markdown(
         f"### Overall Prediction Confidence: **{confidence:.2f}%**"
@@ -372,10 +394,14 @@ if predict:
                 "Estimated Fault Location",
                 f"{fault_distance} m"
             )
+            st.metric(
+               "Prediction Time",
+               datetime.now().strftime("%d-%m-%Y %I:%M:%S %p")
+           )
 
         st.warning(
             "Recommendation: Inspect the underground cable immediately."
-        )
+       )
 
     else:
 
@@ -393,6 +419,10 @@ if predict:
             st.metric(
                 "Estimated Fault Location",
                 "No Fault"
+            )
+            st.metric(
+                "Prediction Time",
+                datetime.now().strftime("%d-%m-%Y %I:%M:%S %p")
             )
 
         st.info(
