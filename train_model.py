@@ -2,7 +2,8 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, confusion_matrix, ConfusionMatrixDisplay
+import matplotlib.pyplot as plt
 import joblib
 
 # Generate reproducible random data
@@ -84,3 +85,42 @@ joblib.dump(model, "model/cable_fault_model.pkl")
 
 print("Model saved successfully!")
 print("Dataset created successfully!")
+# -------------------------------
+# Generate Confusion Matrix
+# -------------------------------
+cm = confusion_matrix(y_test, predictions)
+
+disp = ConfusionMatrixDisplay(
+    confusion_matrix=cm,
+    display_labels=["Healthy", "Faulty"]
+)
+
+disp.plot(cmap="Blues")
+plt.title("Confusion Matrix")
+plt.savefig("documents/confusion_matrix.png", dpi=300, bbox_inches="tight")
+plt.show()
+
+# -------------------------------
+# Generate Feature Importance
+# -------------------------------
+plt.figure(figsize=(8,5))
+
+importance = model.feature_importances_
+
+feature_names = X.columns
+
+plt.bar(feature_names, importance)
+
+plt.xticks(rotation=45)
+
+plt.ylabel("Importance")
+
+plt.title("Feature Importance")
+
+plt.tight_layout()
+
+plt.savefig("documents/feature_importance.png", dpi=300)
+
+plt.show()
+
+print("Graphs generated successfully!")
